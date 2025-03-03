@@ -28,18 +28,27 @@ class Program
         ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"
     };
     private static readonly string activeCollectionsFile = Path.Combine(baseDirectory, "active_collections.txt");
-    
+
 
 
     static async Task Main()
     {
         EnsureDirectoriesExist(); // Проверяем и создаем нужные папки
         await LoadActiveCollections(); // Загружаем активные сборы из файла
+
         try
         {
             bot.StartReceiving(UpdateHandler, ErrorHandler);
             Console.WriteLine("Бот запущен...");
-            await Task.Delay(-1);
+
+            // Ожидаем завершения работы бота
+            var cts = new CancellationTokenSource();
+            Console.CancelKeyPress += (sender, e) => cts.Cancel(); // Обработка Ctrl+C
+            await Task.Delay(-1, cts.Token); // Ожидаем бесконечно, пока не будет отменено
+        }
+        catch (TaskCanceledException)
+        {
+            Console.WriteLine("Бот завершает работу...");
         }
         catch (Exception ex)
         {
@@ -47,11 +56,10 @@ class Program
         }
         finally
         {
-            var cts = new System.Threading.CancellationTokenSource();
-            cts.Cancel();
+            bot.StopReceiving();
+            Console.WriteLine("Бот остановлен.");
         }
     }
-
     // Сохраняем активные сборы в файл
     private static async Task SaveActiveCollections()
     {
