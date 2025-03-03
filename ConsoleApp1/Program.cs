@@ -485,7 +485,7 @@ class Program
                         Console.WriteLine($"Файл успешно сохранен: {destinationFilePath}");
                         saveImageStream.Close();
                         // Создаём папку, если её нет
-                        string tempDir = @"D:\taxi\temp";
+                        string tempDir = Path.GetTempPath();
                         Directory.CreateDirectory(tempDir);
 
                         // Генерируем новый путь в temp-папке
@@ -568,7 +568,7 @@ class Program
                         Console.WriteLine($"Файл успешно сохранен: {destinationFilePath}");
                         saveDocumentStream.Close();
                         // Создаём папку, если её нет
-                        string tempDir = @"D:\taxi\temp";
+                        string tempDir = Path.GetTempPath(); ;
                         Directory.CreateDirectory(tempDir);
 
                         // Генерируем новый путь в temp-папке
