@@ -1,5 +1,5 @@
 # Используем официальный образ .NET SDK для сборки
-FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build-env
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-env
 WORKDIR /app
 
 # Копируем файл решения и восстанавливаем зависимости
@@ -12,7 +12,7 @@ COPY . ./
 RUN dotnet publish -c Release -o out
 
 # Используем runtime образ
-FROM mcr.microsoft.com/dotnet/aspnet:6.0
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build-env /app/out .
 ENTRYPOINT ["dotnet", "ConsoleApp1.dll"]
