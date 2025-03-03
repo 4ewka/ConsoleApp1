@@ -1025,15 +1025,4 @@ public class UserInfo
             bool.Parse(parts[5]) // IsAdmin
         );
     }
-
-        // Если строка содержит 6 значений, это новый формат (с username)
-        return new UserInfo(
-            parts[0], // Username
-            long.Parse(parts[1]), // ChatId
-            parts[2], // FirstName
-            parts[3], // LastName
-            parts[4], // City
-            bool.Parse(parts[5]) // IsAdmin
-        );
-    }
 }
