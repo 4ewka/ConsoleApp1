@@ -1,7 +1,5 @@
 services:
   - type: web
     name: telegram-bot
-    runtime: dotnet
-    buildCommand: dotnet publish -c Release -o out
-    startCommand: dotnet out/ConsoleApp1.dll
-    plan: free
+    env: docker
+    repo: https://github.com/4ewka/ConsoleApp1

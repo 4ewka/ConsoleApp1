@@ -11,13 +11,14 @@ using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using Tesseract;
 using System.Text;
+using System.Net.Http;
 
 class Program
 {
-    private static readonly string baseDirectory = @"D:\taxi";
+    private static readonly string baseDirectory = Path.GetTempPath(); // Используем временную папку
     private static readonly string usersFile = Path.Combine(baseDirectory, "users.txt");
     private static readonly string reportsDir = Path.Combine(baseDirectory, "Reports");
-    private static readonly string botToken = "8163500042:AAF5O9n-tsr4izM2zVblDjYz6EAuUr8IyNE";
+    private static readonly string botToken = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN"); // Токен из переменных окружения
     private static readonly Dictionary<string, string> activeCollections = new(); // Активные сборы отчетов
     private static readonly TelegramBotClient bot = new TelegramBotClient(botToken);
     private static readonly Dictionary<long, string> pendingUserInfo = new();
@@ -101,15 +102,12 @@ class Program
 
     static string ExtractText(string imagePath)
     {
-        // Используем Uri для корректной обработки кириллических символов в пути
-        var uri = new Uri(imagePath);
-        var path = uri.LocalPath;
-
-        var tessdataPath = @"D:\Projects\ConsoleApp1\tessdata";
+        // Используем временную папку для обработки изображений
+        var tessdataPath = Path.Combine(baseDirectory, "tessdata");
 
         using (var engine = new TesseractEngine(tessdataPath, "rus+eng", EngineMode.Default))
         {
-            using (var img = Pix.LoadFromFile(path))
+            using (var img = Pix.LoadFromFile(imagePath))
             {
                 using (var page = engine.Process(img))
                 {
