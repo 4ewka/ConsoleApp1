@@ -14,5 +14,15 @@ RUN dotnet publish -c Release -o out
 # Используем runtime образ
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
+
+# Устанавливаем Tesseract OCR и языковые пакеты
+RUN apt-get update && apt-get install -y tesseract-ocr tesseract-ocr-rus libtesseract-dev
+
+# Копируем собранный проект
 COPY --from=build-env /app/out .
+
+# Указываем рабочий путь к Tesseract (если нужно)
+ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/4.00/tessdata/
+
+# Запускаем приложение
 ENTRYPOINT ["dotnet", "ConsoleApp1.dll"]
