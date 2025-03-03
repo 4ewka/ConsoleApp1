@@ -1,9 +1,10 @@
-# Используем официальный образ .NET
+# Используем официальный образ .NET SDK для сборки
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build-env
 WORKDIR /app
 
-# Копируем файлы проекта и восстанавливаем зависимости
-COPY *.csproj ./
+# Копируем файл решения и восстанавливаем зависимости
+COPY *.sln ./
+COPY ConsoleApp1/*.csproj ./ConsoleApp1/
 RUN dotnet restore
 
 # Копируем все файлы и собираем проект
