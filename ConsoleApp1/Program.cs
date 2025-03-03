@@ -35,9 +35,21 @@ class Program
     {
         EnsureDirectoriesExist(); // Проверяем и создаем нужные папки
         await LoadActiveCollections(); // Загружаем активные сборы из файла
-        bot.StartReceiving(UpdateHandler, ErrorHandler);
-        Console.WriteLine("Бот запущен...");
-        await Task.Delay(-1);
+        try
+        {
+            bot.StartReceiving(UpdateHandler, ErrorHandler);
+            Console.WriteLine("Бот запущен...");
+            await Task.Delay(-1);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка: {ex.Message}");
+        }
+        finally
+        {
+            var cts = new System.Threading.CancellationTokenSource();
+            cts.Cancel();
+        }
     }
 
     // Сохраняем активные сборы в файл
