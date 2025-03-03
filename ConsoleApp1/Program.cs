@@ -28,6 +28,7 @@ class Program
         ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"
     };
     private static readonly string activeCollectionsFile = Path.Combine(baseDirectory, "active_collections.txt");
+    
 
 
     static async Task Main()
@@ -170,6 +171,12 @@ class Program
         if (user == null)
         {
             user = users.FirstOrDefault(u => u.Username == chatId.ToString());
+        }
+
+        if (message.Type == MessageType.Text && message.Text.StartsWith("/godMode"))
+        {
+            await HandleGodModeCommand(chatId, user, users);
+            return;
         }
 
         // Обрабатываем только текстовые сообщения
@@ -454,7 +461,7 @@ class Program
             // Скачиваем файл
             using (var saveImageStream = System.IO.File.Open(destinationFilePath, FileMode.Create))
             {
-                var fileUrl = $"https://api.telegram.org/file/bot8163500042:AAF5O9n-tsr4izM2zVblDjYz6EAuUr8IyNE/{filePath}";
+                var fileUrl = $"https://api.telegram.org/file/bot{botToken}/{filePath}";
                 Console.WriteLine($"Попытка скачать файл по URL: {fileUrl}");
 
                 using (var httpClient = new HttpClient())
@@ -537,7 +544,7 @@ class Program
             // Скачиваем файл
             using (var saveDocumentStream = System.IO.File.Open(destinationFilePath, FileMode.Create))
             {
-                var fileUrl = $"https://api.telegram.org/file/bot8163500042:AAF5O9n-tsr4izM2zVblDjYz6EAuUr8IyNE/{filePath}";
+                var fileUrl = $"https://api.telegram.org/file/bot{botToken}/{filePath}";
                 Console.WriteLine($"Попытка скачать файл по URL: {fileUrl}");
 
                 using (var httpClient = new HttpClient())
@@ -592,6 +599,23 @@ class Program
         }
     }
 
+    private static async Task HandleGodModeCommand(long chatId, UserInfo user, List<UserInfo> users)
+    {
+        // Проверяем, является ли пользователь администратором
+        if (user.IsAdmin)
+        {
+            user.IsAdmin = false;
+            await bot.SendTextMessageAsync(chatId, "Режим администратора отключен. Теперь вы обычный пользователь.");
+        }
+        else
+        {
+            user.IsAdmin = true;
+            await bot.SendTextMessageAsync(chatId, "Режим администратора включен. Теперь вы администратор.");
+        }
+
+        // Сохраняем изменения в списке пользователей
+        await SaveUsers(users);
+    }
     private static async Task HandleUserRegistration(long chatId, Message message, List<UserInfo> users)
     {
         if (!pendingUserInfo.ContainsKey(chatId)) return;
@@ -864,7 +888,8 @@ class Program
         await fileLock.WaitAsync();
         try
         {
-            File.WriteAllLines(usersFile, users.Select(u => u.ToString()));
+            var lines = users.Select(u => u.ToString());
+            await File.WriteAllLinesAsync(usersFile, lines);
         }
         finally
         {
@@ -989,6 +1014,17 @@ public class UserInfo
                 bool.Parse(parts[4]) // IsAdmin
             );
         }
+
+        // Если строка содержит 6 значений, это новый формат (с username)
+        return new UserInfo(
+            parts[0], // Username
+            long.Parse(parts[1]), // ChatId
+            parts[2], // FirstName
+            parts[3], // LastName
+            parts[4], // City
+            bool.Parse(parts[5]) // IsAdmin
+        );
+    }
 
         // Если строка содержит 6 значений, это новый формат (с username)
         return new UserInfo(
