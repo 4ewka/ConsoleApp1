@@ -33,30 +33,29 @@ class Program
 
     static async Task Main()
     {
-        EnsureDirectoriesExist(); // Проверяем и создаем нужные папки
-        await LoadActiveCollections(); // Загружаем активные сборы из файла
+        var cts = new CancellationTokenSource();
+
+        // Обрабатываем SIGTERM для корректного завершения
+        AppDomain.CurrentDomain.ProcessExit += (sender, e) =>
+        {
+            Console.WriteLine("Получен SIGTERM. Остановка бота...");
+            cts.Cancel();
+        };
+
+        Console.WriteLine("Бот запущен...");
+        bot.StartReceiving(UpdateHandler, ErrorHandler, cancellationToken: cts.Token);
 
         try
         {
-            bot.StartReceiving(UpdateHandler, ErrorHandler);
-            Console.WriteLine("Бот запущен...");
-
-            // Ожидаем завершения работы бота
-            var cts = new CancellationTokenSource();
-            Console.CancelKeyPress += (sender, e) => cts.Cancel(); // Обработка Ctrl+C
-            await Task.Delay(-1, cts.Token); // Ожидаем бесконечно, пока не будет отменено
+            await Task.Delay(-1, cts.Token); // Ожидание бесконечно, пока не будет отменено
         }
         catch (TaskCanceledException)
         {
-            Console.WriteLine("Бот завершает работу...");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Ошибка: {ex.Message}");
+            Console.WriteLine("Завершение работы бота...");
         }
         finally
         {
-            bot.StopReceiving();
+            
             Console.WriteLine("Бот остановлен.");
         }
     }
