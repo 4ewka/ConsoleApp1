@@ -57,14 +57,25 @@ class Program
         app.MapGet("/", () => "Hello, Render! Your bot is running.");
         app.Run($"http://0.0.0.0:{port}");
     });  
-        _ = Task.Run(async () =>
+       _ = Task.Run(async () =>
+{
+    using (var client = new HttpClient())
     {
         while (!cts.Token.IsCancellationRequested)
         {
-            await Task.Delay(10000); // Пауза 10 секунд
-            Console.WriteLine("Приложение работает...");
+            await Task.Delay(5 * 60 * 1000); // Пинг каждые 5 минут
+            try
+            {
+                var response = await client.GetAsync("http://consoleapp1.onrender.com/");
+                Console.WriteLine($"Пинг: {response.StatusCode}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при пинге: {ex.Message}");
+            }
         }
-    });
+    }
+});
         
     await Task.Delay(-1, cts.Token); // Ожидание сигнала завершения
     }
