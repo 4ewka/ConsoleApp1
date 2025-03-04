@@ -142,19 +142,24 @@ class Program
 
     static string ExtractText(string imagePath)
 {
-        if (!File.Exists(imagePath))
-{
-    Console.WriteLine($"Файл не найден: {imagePath}");
-    return string.Empty;
-}
-        if (!File.Exists(Path.Combine(AppContext.BaseDirectory, "tessdata"))
-{
-    Console.WriteLine($"Файл не найден: {Path.Combine(AppContext.BaseDirectory, "tessdata"}");
-    return string.Empty;
-}
+    // Проверяем, существует ли изображение
+    if (!File.Exists(imagePath))
+    {
+        Console.WriteLine($"Файл не найден: {imagePath}");
+        return string.Empty;
+    }
+
+    // Проверяем, существует ли папка tessdata
+    string tessdataPath = Path.Combine(AppContext.BaseDirectory, "tessdata");
+    if (!Directory.Exists(tessdataPath))
+    {
+        Console.WriteLine($"Папка с данными Tesseract не найдена: {tessdataPath}");
+        return string.Empty;
+    }
+
     try
     {
-        using (var engine = new TesseractEngine(Path.Combine(AppContext.BaseDirectory, "tessdata"), "rus+eng", EngineMode.Default))
+        using (var engine = new TesseractEngine(tessdataPath, "rus+eng", EngineMode.Default))
         using (var img = Pix.LoadFromFile(imagePath))
         using (var page = engine.Process(img))
         {
@@ -163,10 +168,11 @@ class Program
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Ошибка при попытке достать сумму: {ex.Message}");
-        return string.Empty; // Чтобы избежать ошибки компиляции
+        Console.WriteLine($"Ошибка при попытке достать текст: {ex.Message}");
+        return string.Empty;
     }
 }
+
 
 
     private static void DeleteTempFile(string filePath)
