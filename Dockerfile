@@ -21,8 +21,11 @@ RUN apt-get update && apt-get install -y tesseract-ocr tesseract-ocr-rus libtess
 # Копируем собранный проект
 COPY --from=build-env /app/out .
 
-# Указываем рабочий путь к Tesseract (если нужно)
-ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/4.00/tessdata/
+# Копируем папку tessdata
+COPY --from=build-env /app/tessdata /app/tessdata
+
+# Указываем путь к Tesseract и tessdata
+ENV TESSDATA_PREFIX=/app/tessdata
 
 # Запускаем приложение
 ENTRYPOINT ["dotnet", "ConsoleApp1.dll"]
