@@ -173,8 +173,12 @@ class Program
         return amount;
     }
 
+
     private static async Task UpdateHandler(ITelegramBotClient botClient, Update update, CancellationToken token)
     {
+        try
+        {
+            
         if (update.Type != UpdateType.Message || update.Message == null) return;
 
         var message = update.Message;
@@ -250,6 +254,11 @@ class Program
         {
             // Обработка не текстовых сообщений (фото, документы)
             await HandleNonTextMessage(chatId, message);
+        }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
         }
     }
 
