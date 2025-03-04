@@ -1,5 +1,5 @@
 # Используем официальный образ с Tesseract
-FROM tesseract/tesseract:latest AS tesseract
+FROM tesseract/tesseract:4.1.1 AS tesseract
 
 # Используем официальный образ .NET SDK для сборки
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-env
