@@ -3,11 +3,11 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-env
 WORKDIR /app
 
 # Копируем файл проекта и восстанавливаем зависимости
-COPY *.csproj ./
+COPY . ./
 RUN dotnet restore
 
 # Копируем все файлы и собираем приложение
-COPY . ./
+
 RUN dotnet publish -c Release -o out
 
 # Используем официальный образ .NET Runtime для запуска приложения
