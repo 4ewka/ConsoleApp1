@@ -141,24 +141,23 @@ class Program
     }
 
     static string ExtractText(string imagePath)
+{
+    try
     {
-        try
+        using (var engine = new TesseractEngine(Path.Combine(AppContext.BaseDirectory, "tessdata"), "rus+eng", EngineMode.Default))
+        using (var img = Pix.LoadFromFile(imagePath))
+        using (var page = engine.Process(img))
         {
-        using (var engine = new TesseractEngine(@"./tessdata", "rus+eng", EngineMode.Default))
-        {
-            using (var img = Pix.LoadFromFile(imagePath))
-            {
-                using (var page = engine.Process(img))
-                {
-                    return page.GetText();
-                }
-            }
-        }
-        }
-        catch (Exception ex){
-            Console.WriteLine($"Ошибка при попытке достать сумму: {ex.Message}");
+            return page.GetText();
         }
     }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Ошибка при попытке достать сумму: {ex.Message}");
+        return string.Empty; // Чтобы избежать ошибки компиляции
+    }
+}
+
 
     private static void DeleteTempFile(string filePath)
     {
