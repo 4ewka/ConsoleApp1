@@ -63,7 +63,7 @@ class Program
     {
         while (!cts.Token.IsCancellationRequested)
         {
-            await Task.Delay(5 * 60 * 1000); // Пинг каждые 5 минут
+            await Task.Delay(TimeSpan.FromMinutes(5)); // Пинг каждые 5 минут
             try
             {
                 var response = await client.GetAsync("http://consoleapp1.onrender.com/");
@@ -142,10 +142,8 @@ class Program
 
     static string ExtractText(string imagePath)
     {
-        // Используем временную папку для обработки изображений
-        var tessdataPath = Path.Combine(baseDirectory, "tessdata");
 
-        using (var engine = new TesseractEngine(tessdataPath, "rus+eng", EngineMode.Default))
+        using (var engine = new TesseractEngine(@"./tessdata", "rus+eng", EngineMode.Default))
         {
             using (var img = Pix.LoadFromFile(imagePath))
             {
