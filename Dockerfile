@@ -15,7 +15,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 
 # Устанавливаем Tesseract OCR и Leptonica
-RUN apt-get update && apt-get install -y tesseract-ocr libtesseract-dev libleptonica-dev
+RUN apt-get update -q && apt-get install -y tesseract-ocr libtesseract-dev libleptonica-dev && apt-get clean
 
 # Создаем папку для языковых моделей Tesseract
 RUN mkdir -p /app/tessdata
