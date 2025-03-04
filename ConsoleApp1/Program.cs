@@ -527,8 +527,12 @@ class Program
                         Console.WriteLine($"Создали адрес для копирывания: {tempFilePath}");
 
                         // Копируем файл во временную папку
-                        //File.Copy(destinationFilePath, tempFilePath, true);
-                        
+                        try{
+                        File.Copy(destinationFilePath, tempFilePath, true);
+                        }
+                        catch (Exception ex){
+                            Console.WriteLine($"словили ошибку при копирывании: {ex}");
+                        }                        
 
                         // Извлекаем текст из изображения
                         var extractedText = ExtractText(destinationFilePath);
