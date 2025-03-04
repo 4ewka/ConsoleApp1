@@ -524,10 +524,11 @@ class Program
 
                         // Генерируем новый путь в temp-папке
                         string tempFilePath = Path.Combine(tempDir, Path.GetFileName(destinationFilePath));
+                        Console.WriteLine($"Создали адрес для копирывания: {tempFilePath}");
 
                         // Копируем файл во временную папку
                         //File.Copy(destinationFilePath, tempFilePath, true);
-                        //Console.WriteLine($"Файл скопирован в {tempFilePath}");
+                        
 
                         // Извлекаем текст из изображения
                         var extractedText = ExtractText(destinationFilePath);
