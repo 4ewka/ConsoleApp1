@@ -142,6 +142,16 @@ class Program
 
     static string ExtractText(string imagePath)
 {
+        if (!File.Exists(imagePath))
+{
+    Console.WriteLine($"Файл не найден: {imagePath}");
+    return string.Empty;
+}
+        if (!File.Exists(Path.Combine(AppContext.BaseDirectory, "tessdata"))
+{
+    Console.WriteLine($"Файл не найден: {Path.Combine(AppContext.BaseDirectory, "tessdata"}");
+    return string.Empty;
+}
     try
     {
         using (var engine = new TesseractEngine(Path.Combine(AppContext.BaseDirectory, "tessdata"), "rus+eng", EngineMode.Default))
