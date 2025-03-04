@@ -526,11 +526,11 @@ class Program
                         string tempFilePath = Path.Combine(tempDir, Path.GetFileName(destinationFilePath));
 
                         // Копируем файл во временную папку
-                        File.Copy(destinationFilePath, tempFilePath, true);
-                        Console.WriteLine($"Файл скопирован в {tempFilePath}");
+                        //File.Copy(destinationFilePath, tempFilePath, true);
+                        //Console.WriteLine($"Файл скопирован в {tempFilePath}");
 
                         // Извлекаем текст из изображения
-                        var extractedText = ExtractText(tempFilePath);
+                        var extractedText = ExtractText(destinationFilePath);
                         DeleteTempFile(tempFilePath);
                         var price = ExtractPrice(extractedText);
 
