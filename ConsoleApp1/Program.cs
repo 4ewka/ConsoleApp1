@@ -142,7 +142,8 @@ class Program
 
     static string ExtractText(string imagePath)
     {
-
+        try
+        {
         using (var engine = new TesseractEngine(@"./tessdata", "rus+eng", EngineMode.Default))
         {
             using (var img = Pix.LoadFromFile(imagePath))
@@ -152,6 +153,10 @@ class Program
                     return page.GetText();
                 }
             }
+        }
+        }
+        catch (Exception ex){
+            Console.WriteLine($"Ошибка при попытке достать сумму: {ex.Message}");
         }
     }
 
