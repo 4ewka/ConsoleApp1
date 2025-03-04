@@ -45,23 +45,15 @@ class Program
 
         Console.WriteLine("Бот запущен...");
         bot.StartReceiving(UpdateHandler, ErrorHandler, cancellationToken: cts.Token);
+        // 🔥 Запускаем веб-сервер, чтобы Render не падал
+    var builder = WebApplication.CreateBuilder();
+    var app = builder.Build();
+    
+    string port = Environment.GetEnvironmentVariable("PORT") ?? "10000"; // Используем порт Render
+    app.MapGet("/", () => "Hello, Render! Your bot is running.");
+    app.Run($"http://0.0.0.0:{port}");        
         
-        
-await Task.Delay(-1, cts.Token); // Ожидание сигнала завершения
-
-        try
-        {
-            await Task.Delay(-1, cts.Token); // Ожидание бесконечно, пока не будет отменено
-        }
-        catch (TaskCanceledException)
-        {
-            Console.WriteLine("Завершение работы бота...");
-        }
-        finally
-        {
-            
-            Console.WriteLine("Бот остановлен.");
-        }
+    await Task.Delay(-1, cts.Token); // Ожидание сигнала завершения
     }
     // Сохраняем активные сборы в файл
     private static async Task SaveActiveCollections()
