@@ -15,12 +15,16 @@ RUN dotnet publish -c Release -o out
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 
-# Устанавливаем Tesseract OCR, Leptonica и необходимые библиотеки
+# Устанавливаем нужные пакеты
 RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     tesseract-ocr-rus \
     libtesseract-dev \
-    libleptonica-dev
+    libleptonica-dev \
+    libleptonica0  # <-- Добавляем этот пакет
+
+# Проверяем наличие Leptonica
+RUN ldconfig && ldconfig -p | grep leptonica
 
 # Копируем собранный проект
 COPY --from=build-env /app/out .
