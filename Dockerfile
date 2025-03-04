@@ -11,12 +11,16 @@ RUN dotnet restore
 COPY . ./
 RUN dotnet publish -c Release -o out
 
-# Используем runtime образ
+# Используем runtime-образ
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 
-# Устанавливаем Tesseract OCR и языковые пакеты
-RUN apt-get update && apt-get install -y tesseract-ocr tesseract-ocr-rus libtesseract-dev
+# Устанавливаем Tesseract OCR, Leptonica и необходимые библиотеки
+RUN apt-get update && apt-get install -y \
+    tesseract-ocr \
+    tesseract-ocr-rus \
+    libtesseract-dev \
+    libleptonica-dev
 
 # Копируем собранный проект
 COPY --from=build-env /app/out .
@@ -24,7 +28,7 @@ COPY --from=build-env /app/out .
 # Копируем папку tessdata
 COPY --from=build-env /app/tessdata /app/tessdata
 
-# Указываем путь к Tesseract и tessdata
+# Указываем путь к tessdata
 ENV TESSDATA_PREFIX=/app/tessdata
 
 # Запускаем приложение
