@@ -2,7 +2,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-env
 WORKDIR /app
 
-# Копируем файлы проекта и восстанавливаем зависимости
+# Копируем файл проекта и восстанавливаем зависимости
 COPY *.csproj ./
 RUN dotnet restore
 
