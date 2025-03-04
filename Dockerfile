@@ -15,11 +15,8 @@ RUN dotnet publish -c Release -o out
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 
-# Устанавливаем необходимые зависимости
+# Устанавливаем Tesseract и его зависимости
 RUN apt-get update && apt-get install -y \
-    software-properties-common \
-    && add-apt-repository ppa:alex-p/tesseract-ocr -y \
-    && apt-get update && apt-get install -y \
     tesseract-ocr \
     tesseract-ocr-rus \
     libtesseract-dev \
