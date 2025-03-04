@@ -1,3 +1,6 @@
+# Используем образ с Tesseract
+FROM tesseractshadow/tesseract4
+
 # Используем официальный образ .NET SDK для сборки
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-env
 WORKDIR /app
@@ -15,25 +18,15 @@ RUN dotnet publish -c Release -o out
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 
-# Устанавливаем Tesseract и его зависимости
-RUN apt-get update && apt-get install -y \
-    tesseract-ocr \
-    tesseract-ocr-rus \
-    libtesseract-dev \
-    libleptonica-dev \
-    && apt-get clean
-
-# Проверяем наличие Leptonica
-RUN ldconfig && ldconfig -p | grep leptonica
+# Копируем Tesseract из предыдущего образа
+COPY --from=tesseractshadow/tesseract4 /usr/local/bin/tesseract /usr/local/bin/tesseract
+COPY --from=tesseractshadow/tesseract4 /usr/share/tesseract-ocr/4.00/tessdata /usr/share/tesseract-ocr/4.00/tessdata
 
 # Копируем собранный проект
 COPY --from=build-env /app/out .
 
-# Копируем папку tessdata
-COPY --from=build-env /app/tessdata /app/tessdata
-
 # Указываем путь к tessdata
-ENV TESSDATA_PREFIX=/app/tessdata
+ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/4.00/tessdata
 
 # Запускаем приложение
 ENTRYPOINT ["dotnet", "ConsoleApp1.dll"]
