@@ -1,5 +1,5 @@
-# Используем образ с Tesseract
-FROM tesseractshadow/tesseract4
+# Используем официальный образ с Tesseract
+FROM tesseract/tesseract:latest AS tesseract
 
 # Используем официальный образ .NET SDK для сборки
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-env
@@ -19,8 +19,8 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 
 # Копируем Tesseract из предыдущего образа
-COPY --from=tesseractshadow/tesseract4 /usr/local/bin/tesseract /usr/local/bin/tesseract
-COPY --from=tesseractshadow/tesseract4 /usr/share/tesseract-ocr/4.00/tessdata /usr/share/tesseract-ocr/4.00/tessdata
+COPY --from=tesseract /usr/local/bin/tesseract /usr/local/bin/tesseract
+COPY --from=tesseract /usr/share/tesseract-ocr/4.00/tessdata /usr/share/tesseract-ocr/4.00/tessdata
 
 # Копируем собранный проект
 COPY --from=build-env /app/out .
