@@ -47,13 +47,16 @@ class Program
 
         Console.WriteLine("Бот запущен...");
         bot.StartReceiving(UpdateHandler, ErrorHandler, cancellationToken: cts.Token);
-        // 🔥 Запускаем веб-сервер, чтобы Render не падал
-    var builder = WebApplication.CreateBuilder();
-    var app = builder.Build();
-    
-    string port = Environment.GetEnvironmentVariable("PORT") ?? "10000"; // Используем порт Render
-    app.MapGet("/", () => "Hello, Render! Your bot is running.");
-    app.Run($"http://0.0.0.0:{port}");        
+    // 🔥 Запускаем веб-сервер в отдельной задаче
+    _ = Task.Run(() =>
+    {
+        var builder = WebApplication.CreateBuilder();
+        var app = builder.Build();
+        
+        string port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
+        app.MapGet("/", () => "Hello, Render! Your bot is running.");
+        app.Run($"http://0.0.0.0:{port}");
+    });  
         
     await Task.Delay(-1, cts.Token); // Ожидание сигнала завершения
     }
