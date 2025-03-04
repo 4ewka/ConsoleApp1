@@ -1,32 +1,30 @@
-# Используем официальный образ с Tesseract
-FROM tesseract/tesseract:4.1.1 AS tesseract
-
-# Используем официальный образ .NET SDK для сборки
+# Используем официальный образ .NET SDK для сборки приложения
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-env
 WORKDIR /app
 
-# Копируем файл решения и восстанавливаем зависимости
-COPY *.sln ./
-COPY ConsoleApp1/*.csproj ./ConsoleApp1/
+# Копируем файлы проекта и восстанавливаем зависимости
+COPY *.csproj ./
 RUN dotnet restore
 
-# Копируем все файлы и собираем проект
+# Копируем все файлы и собираем приложение
 COPY . ./
 RUN dotnet publish -c Release -o out
 
-# Используем runtime-образ
+# Используем официальный образ .NET Runtime для запуска приложения
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 
-# Копируем Tesseract из предыдущего образа
-COPY --from=tesseract /usr/local/bin/tesseract /usr/local/bin/tesseract
-COPY --from=tesseract /usr/share/tesseract-ocr/4.00/tessdata /usr/share/tesseract-ocr/4.00/tessdata
+# Устанавливаем Tesseract OCR и Leptonica
+RUN apt-get update && apt-get install -y tesseract-ocr libtesseract-dev libleptonica-dev
 
-# Копируем собранный проект
+# Создаем папку для языковых моделей Tesseract
+RUN mkdir -p /app/tessdata
+
+# Копируем языковые модели (например, rus.traineddata и eng.traineddata)
+COPY tessdata/* /app/tessdata/
+
+# Копируем собранные файлы из этапа сборки
 COPY --from=build-env /app/out .
 
-# Указываем путь к tessdata
-ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/4.00/tessdata
-
-# Запускаем приложение
+# Указываем команду для запуска приложения
 ENTRYPOINT ["dotnet", "ConsoleApp1.dll"]
