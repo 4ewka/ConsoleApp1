@@ -12,6 +12,8 @@ using System.Text.RegularExpressions;
 using Tesseract;
 using System.Text;
 using System.Net.Http;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Hosting;
 
 
 class Program
