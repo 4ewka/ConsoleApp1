@@ -142,36 +142,57 @@ class Program
 
     static string ExtractText(string imagePath)
 {
-    // Проверяем, существует ли изображение
+    Console.WriteLine($"Начало обработки файла: {imagePath}");
+
+    // Проверяем, существует ли файл изображения
     if (!File.Exists(imagePath))
     {
         Console.WriteLine($"Файл не найден: {imagePath}");
         return string.Empty;
     }
 
-    // Проверяем, существует ли папка tessdata
-    string tessdataPath = Path.Combine(AppContext.BaseDirectory, "tessdata");
+    string tessdataPath = "/app/tessdata"; // Указываем путь к tessdata
+
+    // Проверяем, существует ли папка с языковыми моделями
     if (!Directory.Exists(tessdataPath))
     {
         Console.WriteLine($"Папка с данными Tesseract не найдена: {tessdataPath}");
         return string.Empty;
     }
 
+    // Проверяем, какие файлы есть в tessdata
+    var files = Directory.GetFiles(tessdataPath);
+    Console.WriteLine($"Файлы в tessdata: {string.Join(", ", files)}");
+
     try
     {
+        Console.WriteLine("Создаём движок Tesseract...");
         using (var engine = new TesseractEngine(tessdataPath, "rus+eng", EngineMode.Default))
-        using (var img = Pix.LoadFromFile(imagePath))
-        using (var page = engine.Process(img))
         {
-            return page.GetText();
+            Console.WriteLine("Движок создан успешно.");
+
+            Console.WriteLine("Загружаем изображение...");
+            using (var img = Pix.LoadFromFile(imagePath))
+            {
+                Console.WriteLine("Изображение загружено.");
+
+                Console.WriteLine("Обрабатываем изображение через Tesseract...");
+                using (var page = engine.Process(img))
+                {
+                    string extractedText = page.GetText();
+                    Console.WriteLine($"Распознанный текст: {extractedText}");
+                    return extractedText;
+                }
+            }
         }
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Ошибка при попытке достать текст: {ex.Message}");
+        Console.WriteLine($"Ошибка при попытке достать текст: {ex.ToString()}");
         return string.Empty;
     }
 }
+
 
 
 
