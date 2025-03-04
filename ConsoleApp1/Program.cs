@@ -44,6 +44,8 @@ class Program
 
         Console.WriteLine("Бот запущен...");
         bot.StartReceiving(UpdateHandler, ErrorHandler, cancellationToken: cts.Token);
+        string port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+        app.Run($"http://0.0.0.0:{port}");
 
         try
         {
