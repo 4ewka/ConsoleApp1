@@ -28,7 +28,8 @@ RUN ln -s /usr/lib/x86_64-linux-gnu/libdl.so.2 /usr/lib/x86_64-linux-gnu/libdl.s
 RUN ln -s /usr/lib/x86_64-linux-gnu/liblept.so.5 /app/x64/liblept.so.5
 RUN ln -s /usr/lib/x86_64-linux-gnu/liblept.so.5 /app/x64/libleptonica-1.82.0.so
 
-RUN ln -s /usr/lib/x86_64-linux-gnu/libtesseract.so.4.0.1 /app/x64/libtesseract41.so
+№RUN ln -s /usr/lib/x86_64-linux-gnu/libtesseract.so.4.0.1 /app/x64/libtesseract41.so
+RUN ln -s /usr/lib/x86_64-linux-gnu/libtesseract.so.4 /app/x64/libtesseract50.so
 
 # Указываем путь к Tesseract и tessdata
 ENV TESSDATA_PREFIX=/app/tessdata
