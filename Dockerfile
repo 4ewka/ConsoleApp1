@@ -27,5 +27,7 @@ COPY --from=build-env /app/tessdata /app/tessdata
 # Указываем путь к Tesseract и tessdata
 ENV TESSDATA_PREFIX=/app/tessdata
 
+RUN sudo chmod 777 /app/x64
+
 # Запускаем приложение
 ENTRYPOINT ["dotnet", "ConsoleApp1.dll"]
