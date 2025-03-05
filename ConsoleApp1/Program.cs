@@ -36,6 +36,27 @@ class Program
 
     static async Task Main()
     {
+        // Получаем текущую рабочую директорию
+        string currentDirectory = Directory.GetCurrentDirectory();
+        Console.WriteLine($"Текущая директория: {currentDirectory}");
+
+        // Получаем список файлов и папок в текущей директории
+        string[] files = Directory.GetFiles(currentDirectory);
+        string[] directories = Directory.GetDirectories(currentDirectory);
+
+        // Выводим список файлов
+        Console.WriteLine("\nФайлы:");
+        foreach (string file in files)
+        {
+            Console.WriteLine(Path.GetFileName(file));
+        }
+
+        // Выводим список папок
+        Console.WriteLine("\nПапки:");
+        foreach (string directory in directories)
+        {
+            Console.WriteLine(Path.GetFileName(directory));
+        }
         var cts = new CancellationTokenSource();
 
         // Обрабатываем SIGTERM для корректного завершения
