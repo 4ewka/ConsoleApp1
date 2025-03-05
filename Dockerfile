@@ -24,7 +24,7 @@ COPY --from=build-env /app/out .
 # Копируем папку tessdata
 COPY --from=build-env /app/tessdata /app/tessdata
 
-
+RUN ln -s /usr/lib/x86_64-linux-gnu/libdl.so.2 /usr/lib/x86_64-linux-gnu/libdl.so
 RUN ln -s /usr/lib/x86_64-linux-gnu/liblept.so.5 /app/x64/liblept.so.5
 RUN ln -s /usr/lib/x86_64-linux-gnu/liblept.so.5 /app/x64/libleptonica-1.82.0.so
 
