@@ -39,24 +39,9 @@ class Program
         // Получаем текущую рабочую директорию
         string currentDirectory = Directory.GetCurrentDirectory();
         Console.WriteLine($"Текущая директория: {currentDirectory}");
-
-        // Получаем список файлов и папок в текущей директории
-        string[] files = Directory.GetFiles(currentDirectory);
-        string[] directories = Directory.GetDirectories(currentDirectory);
-
-        // Выводим список файлов
-        Console.WriteLine("\nФайлы:");
-        foreach (string file in files)
-        {
-            Console.WriteLine(Path.GetFileName(file));
-        }
-
-        // Выводим список папок
-        Console.WriteLine("\nПапки:");
-        foreach (string directory in directories)
-        {
-            Console.WriteLine(Path.GetFileName(directory));
-        }
+        // Рекурсивно выводим все файлы
+        PrintAllFiles(currentDirectory);
+        
         var cts = new CancellationTokenSource();
 
         // Обрабатываем SIGTERM для корректного завершения
@@ -99,6 +84,31 @@ class Program
 });
         
     await Task.Delay(-1, cts.Token); // Ожидание сигнала завершения
+    }
+
+    static void PrintAllFiles(string path)
+    {
+        try
+        {
+            // Выводим все файлы в текущей директории
+            string[] files = Directory.GetFiles(path);
+            foreach (string file in files)
+            {
+                Console.WriteLine(file);
+            }
+
+            // Рекурсивно обходим все поддиректории
+            string[] directories = Directory.GetDirectories(path);
+            foreach (string directory in directories)
+            {
+                PrintAllFiles(directory); // Рекурсивный вызов для каждой поддиректории
+            }
+        }
+        catch (Exception ex)
+        {
+            // Обработка ошибок (например, отсутствие доступа к папке)
+            Console.WriteLine($"Ошибка при доступе к {path}: {ex.Message}");
+        }
     }
     // Сохраняем активные сборы в файл
     private static async Task SaveActiveCollections()
