@@ -24,10 +24,15 @@ COPY --from=build-env /app/out .
 # Копируем папку tessdata
 COPY --from=build-env /app/tessdata /app/tessdata
 
+RUN cd ~/app/x64
+
+RUN ln -s /usr/lib/x86_64-linux-gnu/liblept.so.5 liblept.so.5
+RUN ln -s /usr/lib/x86_64-linux-gnu/liblept.so.5 libleptonica-1.82.0.so
+
+RUN ln -s /usr/lib/x86_64-linux-gnu/libtesseract.so.4.0.1 libtesseract41.so
+
 # Указываем путь к Tesseract и tessdata
 ENV TESSDATA_PREFIX=/app/tessdata
-
-RUN sudo chmod 777 /app/x64
 
 # Запускаем приложение
 ENTRYPOINT ["dotnet", "ConsoleApp1.dll"]
