@@ -35,13 +35,7 @@ class Program
 
 
     static async Task Main()
-    {
-        // Получаем текущую рабочую директорию
-        string currentDirectory = Directory.GetCurrentDirectory();
-        Console.WriteLine($"Текущая директория: {currentDirectory}");
-        // Рекурсивно выводим все файлы
-        PrintAllFiles(currentDirectory);
-        
+    {  
         var cts = new CancellationTokenSource();
 
         // Обрабатываем SIGTERM для корректного завершения
@@ -53,6 +47,7 @@ class Program
 
         Console.WriteLine("Бот запущен...");
         bot.StartReceiving(UpdateHandler, ErrorHandler, cancellationToken: cts.Token);
+        await bot.SendMessage("704236737", "Бот запущен");
     // 🔥 Запускаем веб-сервер в отдельной задаче
     _ = Task.Run(() =>
     {
@@ -86,30 +81,6 @@ class Program
     await Task.Delay(-1, cts.Token); // Ожидание сигнала завершения
     }
 
-    static void PrintAllFiles(string path)
-    {
-        try
-        {
-            // Выводим все файлы в текущей директории
-            string[] files = Directory.GetFiles(path);
-            foreach (string file in files)
-            {
-                Console.WriteLine(file);
-            }
-
-            // Рекурсивно обходим все поддиректории
-            string[] directories = Directory.GetDirectories(path);
-            foreach (string directory in directories)
-            {
-                PrintAllFiles(directory); // Рекурсивный вызов для каждой поддиректории
-            }
-        }
-        catch (Exception ex)
-        {
-            // Обработка ошибок (например, отсутствие доступа к папке)
-            Console.WriteLine($"Ошибка при доступе к {path}: {ex.Message}");
-        }
-    }
     // Сохраняем активные сборы в файл
     private static async Task SaveActiveCollections()
     {
@@ -189,11 +160,7 @@ class Program
     {
         Console.WriteLine($"Папка с данными Tesseract не найдена: {tessdataPath}");
         return string.Empty;
-    }
-
-    // Проверяем, какие файлы есть в tessdata
-    var files = Directory.GetFiles(tessdataPath);
-    Console.WriteLine($"Файлы в tessdata: {string.Join(", ", files)}");
+    }   
 
     try
     {
@@ -211,7 +178,6 @@ class Program
                 using (var page = engine.Process(img))
                 {
                     string extractedText = page.GetText();
-                    Console.WriteLine($"Распознанный текст: {extractedText}");
                     return extractedText;
                 }
             }
