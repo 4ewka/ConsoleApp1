@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "ConsoleApp1": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "TELEGRAM_BOT_TOKEN": "8163500042:AAF5O9n-tsr4izM2zVblDjYz6EAuUr8IyNE"
+      }
+    }
+  }
+}

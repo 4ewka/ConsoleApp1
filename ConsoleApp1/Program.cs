@@ -14,11 +14,12 @@ using System.Text;
 using System.Net.Http;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
+using System.Globalization;
 
 
 class Program
 {
-    private static readonly string baseDirectory = Path.GetTempPath(); // Используем временную папку
+    private static readonly string baseDirectory = @"C:\bot"; // Используем временную папку
     private static readonly string usersFile = Path.Combine(baseDirectory, "users.txt");
     private static readonly string reportsDir = Path.Combine(baseDirectory, "Reports");
     private static readonly string botToken = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN"); // Токен из переменных окружения
@@ -46,36 +47,9 @@ class Program
         };
 
         Console.WriteLine("Бот запущен...");
+        LoadActiveCollections();
         bot.StartReceiving(UpdateHandler, ErrorHandler, cancellationToken: cts.Token);
-    // 🔥 Запускаем веб-сервер в отдельной задаче
-    _ = Task.Run(() =>
-    {
-        var builder = WebApplication.CreateBuilder();
-        var app = builder.Build();
-        
-        string port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
-        app.MapGet("/", () => "Hello, Render! Your bot is running.");
-        app.Run($"http://0.0.0.0:{port}");
-    });  
-       _ = Task.Run(async () =>
-{
-    using (var client = new HttpClient())
-    {
-        while (!cts.Token.IsCancellationRequested)
-        {
-            await Task.Delay(TimeSpan.FromMinutes(5)); // Пинг каждые 5 минут
-            try
-            {
-                var response = await client.GetAsync("http://consoleapp1.onrender.com/");
-                Console.WriteLine($"Пинг: {response.StatusCode}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Ошибка при пинге: {ex.Message}");
-            }
-        }
-    }
-});
+    
         
     await Task.Delay(-1, cts.Token); // Ожидание сигнала завершения
     }
@@ -151,7 +125,7 @@ class Program
         return string.Empty;
     }
 
-    string tessdataPath = "/app/tessdata"; // Указываем путь к tessdata
+    string tessdataPath = Path.Combine(baseDirectory, "tessdata"); // Указываем путь к tessdata
 
     // Проверяем, существует ли папка с языковыми моделями
     if (!Directory.Exists(tessdataPath))
@@ -161,8 +135,7 @@ class Program
     }
 
     // Проверяем, какие файлы есть в tessdata
-    var files = Directory.GetFiles(tessdataPath);
-    Console.WriteLine($"Файлы в tessdata: {string.Join(", ", files)}");
+    
 
     try
     {
@@ -179,8 +152,7 @@ class Program
                 Console.WriteLine("Обрабатываем изображение через Tesseract...");
                 using (var page = engine.Process(img))
                 {
-                    string extractedText = page.GetText();
-                    Console.WriteLine($"Распознанный текст: {extractedText}");
+                    string extractedText = page.GetText();                    
                     return extractedText;
                 }
             }
@@ -366,7 +338,7 @@ class Program
         }
 
         // Пытаемся распарсить сумму чека
-        if (!decimal.TryParse(messageText, out var amount))
+        if (!decimal.TryParse(messageText, NumberStyles.Any, new CultureInfo("ru-RU"), out var amount))
         {
             await bot.SendTextMessageAsync(chatId, "Некорректная сумма. Введите число. Формат: Рублей, копеек - через запятую, например: 18,03");
             return;
@@ -419,7 +391,7 @@ class Program
         {
             var autoChecks = await File.ReadAllLinesAsync(autoChecksFilePath);
             totalAutoAmount = autoChecks
-                .Select(line => decimal.Parse(line.Split(' ')[0])) // Берем только сумму
+                .Select(line => decimal.Parse(line.Split(' ')[0], new CultureInfo("ru-RU"))) // Берем только сумму
                 .Sum();
         }
 
@@ -485,7 +457,7 @@ class Program
                 if (manualChecks.Length > 0)
                 {
                     var lastManualCheck = manualChecks.Last();
-                    totalAmount += decimal.Parse(lastManualCheck.Split(' ')[0]); // Берем последнюю ручную сумму
+                    totalAmount += decimal.Parse(lastManualCheck.Split(' ')[0], new CultureInfo("ru-RU")); // Берем последнюю ручную сумму
                     continue;
                 }
             }
@@ -496,7 +468,7 @@ class Program
             {
                 var autoChecks = await File.ReadAllLinesAsync(autoChecksFilePath);
                 totalAmount += autoChecks
-                    .Select(line => decimal.Parse(line.Split(' ')[0])) // Берем только сумму
+                    .Select(line => decimal.Parse(line.Split(' ')[0], new CultureInfo("ru-RU"))) // Берем только сумму
                     .Sum();
             }
         }
@@ -903,7 +875,7 @@ class Program
             {
                 var autoChecks = File.ReadAllLines(autoChecksFilePath);
                 totalAutoAmount = autoChecks
-                    .Select(line => decimal.Parse(line.Split(' ')[0])) // Берем только сумму
+                    .Select(line => decimal.Parse(line.Split(' ')[0], new CultureInfo("ru-RU"))) // Берем только сумму
                     .Sum();
             }
 
