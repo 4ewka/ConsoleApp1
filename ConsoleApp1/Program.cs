@@ -49,9 +49,9 @@ class Program
         Console.WriteLine("Бот запущен...");
         LoadActiveCollections();
         bot.StartReceiving(UpdateHandler, ErrorHandler, cancellationToken: cts.Token);
-    
-        
-    await Task.Delay(-1, cts.Token); // Ожидание сигнала завершения
+
+
+        await Task.Delay(-1, cts.Token); // Ожидание сигнала завершения
     }
     // Сохраняем активные сборы в файл
     private static async Task SaveActiveCollections()
@@ -115,58 +115,62 @@ class Program
     }
 
     static string ExtractText(string imagePath)
-{
-    Console.WriteLine($"Начало обработки файла: {imagePath}");
-
-    // Проверяем, существует ли файл изображения
-    if (!File.Exists(imagePath))
     {
-        Console.WriteLine($"Файл не найден: {imagePath}");
-        return string.Empty;
-    }
+        Console.WriteLine($"Начало обработки файла: {imagePath}");
 
-    string tessdataPath = Path.Combine(baseDirectory, "tessdata"); // Указываем путь к tessdata
-
-    // Проверяем, существует ли папка с языковыми моделями
-    if (!Directory.Exists(tessdataPath))
-    {
-        Console.WriteLine($"Папка с данными Tesseract не найдена: {tessdataPath}");
-        return string.Empty;
-    }
-
-    // Проверяем, какие файлы есть в tessdata
-    
-
-    try
-    {
-        Console.WriteLine("Создаём движок Tesseract...");
-        using (var engine = new TesseractEngine(tessdataPath, "rus+eng", EngineMode.Default))
+        // Проверяем, существует ли файл изображения
+        if (!File.Exists(imagePath))
         {
-            Console.WriteLine("Движок создан успешно.");
+            Console.WriteLine($"Файл не найден: {imagePath}");
+            return string.Empty;
+        }
 
-            Console.WriteLine("Загружаем изображение...");
-            using (var img = Pix.LoadFromFile(imagePath))
+        string tessdataPath = Path.Combine(baseDirectory, "tessdata"); // Указываем путь к tessdata
+
+        // Проверяем, существует ли папка с языковыми моделями
+        if (!Directory.Exists(tessdataPath))
+        {
+            Console.WriteLine($"Папка с данными Tesseract не найдена: {tessdataPath}");
+            return string.Empty;
+        }
+
+        // Проверяем, какие файлы есть в tessdata
+
+
+        try
+        {
+            using (var engine = new TesseractEngine(tessdataPath, "rus+eng", EngineMode.Default))
             {
-                Console.WriteLine("Изображение загружено.");
+                // Настройки для распознавания
+                
+                
 
-                Console.WriteLine("Обрабатываем изображение через Tesseract...");
-                using (var page = engine.Process(img))
+                using (var img = Pix.LoadFromFile(imagePath))
                 {
-                    string extractedText = page.GetText();                    
-                    return extractedText;
+                    // 1. Конвертация в grayscale (улучшает распознавание)
+                    using (var img8bit = img.ConvertRGBToGray())
+                    {
+                        // 2. Масштабирование в 2 раза
+                        using (var scaled = img8bit.Scale(2.0f, 2.0f)) // Увеличение в 2 раза
+                        {
+                            // 3. Распознавание с режимом для квитанций
+                            using (var page = engine.Process(scaled, PageSegMode.Auto))
+                            {
+                                string text = page.GetText();
+                                return text;
+                            }
+                        }
+                    }
                 }
             }
         }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка: {ex.Message}");
+            return string.Empty;
+        }
     }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Ошибка при попытке достать текст: {ex.ToString()}");
-        return string.Empty;
-    }
-}
-
-
-
+       
 
     private static void DeleteTempFile(string filePath)
     {
@@ -195,7 +199,7 @@ class Program
             if (int.TryParse(amount, out int number))
             {
                 // Проверяем условия: число > 2000 и заканчивается на 2
-                if (number > 2000 && number % 10 == 2)
+                if ((number > 2000 && number % 10 == 2)||number > 4000)
                 {
                     // Отбрасываем последнюю цифру
                     amount = (number / 10).ToString();
@@ -211,83 +215,83 @@ class Program
     {
         try
         {
-            
-        if (update.Type != UpdateType.Message || update.Message == null) return;
 
-        var message = update.Message;
-        var chatId = message.Chat.Id;
-        var username = message.From?.Username;
+            if (update.Type != UpdateType.Message || update.Message == null) return;
 
-        Console.WriteLine($"[{DateTime.Now}] Сообщение от {username} (чат {chatId}): {message.Text ?? "Нет текста"}");
+            var message = update.Message;
+            var chatId = message.Chat.Id;
+            var username = message.From?.Username;
 
-        var users = LoadUsers();
-        var user = users.FirstOrDefault(u => u.Username == username);
-        if (user == null)
-        {
-            user = users.FirstOrDefault(u => u.Username == chatId.ToString());
-        }
+            Console.WriteLine($"[{DateTime.Now}] Сообщение от {username} (чат {chatId}): {message.Text ?? "Нет текста"}");
 
-        if (message.Type == MessageType.Text && message.Text.StartsWith("/godMode"))
-        {
-            await HandleGodModeCommand(chatId, user, users);
-            return;
-        }
-
-        // Обрабатываем только текстовые сообщения
-        if (message.Type == MessageType.Text)
-        {
-            if (user == null && !pendingUserInfo.ContainsKey(chatId))
+            var users = LoadUsers();
+            var user = users.FirstOrDefault(u => u.Username == username);
+            if (user == null)
             {
-                await bot.SendTextMessageAsync(chatId, "Введите ваш город (Минск, Гомель, Новосибирск, Кишенев/Кишинёв, Ереван):");
-                pendingUserInfo[chatId] = "city";
+                user = users.FirstOrDefault(u => u.Username == chatId.ToString());
+            }
+
+            if (message.Type == MessageType.Text && message.Text.StartsWith("/godMode"))
+            {
+                await HandleGodModeCommand(chatId, user, users);
                 return;
             }
 
-            if (pendingUserInfo.ContainsKey(chatId))
+            // Обрабатываем только текстовые сообщения
+            if (message.Type == MessageType.Text)
             {
-                await HandleUserRegistration(chatId, message, users);
-                return;
-            }
+                if (user == null && !pendingUserInfo.ContainsKey(chatId))
+                {
+                    await bot.SendTextMessageAsync(chatId, "Введите ваш город (Минск, Гомель, Новосибирск, Кишенев/Кишинёв, Ереван):");
+                    pendingUserInfo[chatId] = "city";
+                    return;
+                }
 
-            if (message.Text.StartsWith("/start"))
-            {
-                await HandleStartCommand(chatId, user);
-            }
-            else if (message.Text.StartsWith("/collect") && user.IsAdmin)
-            {
-                await HandleCollectCommand(chatId, message.Text, user);
-            }
-            else if (message.Text.StartsWith("/finish") && user.IsAdmin)
-            {
-                await HandleFinishCommand(chatId, user);
-            }
-            else if (message.Text.StartsWith("/total"))
-            {
-                await HandleTotalCommand(chatId, user);
-            }
-            else if (message.Text.StartsWith("/info"))
-            {
-                await HandleInfoCommand(chatId, user);
-            }
-            else if (message.Text.StartsWith("/delete"))
-            {
-                await HandleDeleteCommand(chatId, users);
-            }
-            else if (message.Text.StartsWith("/clear"))
-            {
-                await HandleClearCommand(chatId, user);
+                if (pendingUserInfo.ContainsKey(chatId))
+                {
+                    await HandleUserRegistration(chatId, message, users);
+                    return;
+                }
+
+                if (message.Text.StartsWith("/start"))
+                {
+                    await HandleStartCommand(chatId, user);
+                }
+                else if (message.Text.StartsWith("/collect") && user.IsAdmin)
+                {
+                    await HandleCollectCommand(chatId, message.Text, user);
+                }
+                else if (message.Text.StartsWith("/finish") && user.IsAdmin)
+                {
+                    await HandleFinishCommand(chatId, user);
+                }
+                else if (message.Text.StartsWith("/total"))
+                {
+                    await HandleTotalCommand(chatId, user);
+                }
+                else if (message.Text.StartsWith("/info"))
+                {
+                    await HandleInfoCommand(chatId, user);
+                }
+                else if (message.Text.StartsWith("/delete"))
+                {
+                    await HandleDeleteCommand(chatId, users);
+                }
+                else if (message.Text.StartsWith("/clear"))
+                {
+                    await HandleClearCommand(chatId, user);
+                }
+                else
+                {
+                    // Обработка суммы чека
+                    await HandleCheckAmount(chatId, message.Text, user);
+                }
             }
             else
             {
-                // Обработка суммы чека
-                await HandleCheckAmount(chatId, message.Text, user);
+                // Обработка не текстовых сообщений (фото, документы)
+                await HandleNonTextMessage(chatId, message);
             }
-        }
-        else
-        {
-            // Обработка не текстовых сообщений (фото, документы)
-            await HandleNonTextMessage(chatId, message);
-        }
         }
         catch (Exception ex)
         {
@@ -540,12 +544,14 @@ class Program
                         Console.WriteLine($"Создали адрес для копирывания: {tempFilePath}");
 
                         // Копируем файл во временную папку
-                        try{
-                        File.Copy(destinationFilePath, tempFilePath, true);
+                        try
+                        {
+                            File.Copy(destinationFilePath, tempFilePath, true);
                         }
-                        catch (Exception ex){
+                        catch (Exception ex)
+                        {
                             Console.WriteLine($"словили ошибку при копирывании: {ex}");
-                        }                        
+                        }
 
                         // Извлекаем текст из изображения
                         var extractedText = ExtractText(destinationFilePath);
@@ -875,7 +881,13 @@ class Program
             {
                 var autoChecks = File.ReadAllLines(autoChecksFilePath);
                 totalAutoAmount = autoChecks
-                    .Select(line => decimal.Parse(line.Split(' ')[0], new CultureInfo("ru-RU"))) // Берем только сумму
+                    .Select(line =>
+                    {
+                        var amountPart = line.Split(' ')[0];
+                        // Заменяем точку на запятую, если нужно
+                        amountPart = amountPart.Replace('.', ',');
+                        return decimal.Parse(amountPart);
+                    })
                     .Sum();
             }
 
