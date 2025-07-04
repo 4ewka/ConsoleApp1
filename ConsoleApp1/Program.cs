@@ -15,6 +15,8 @@ using System.Net.Http;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
 using System.Globalization;
+using OpenCvSharp;
+
 
 
 class Program
@@ -32,7 +34,7 @@ class Program
         ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"
     };
     private static readonly string activeCollectionsFile = Path.Combine(baseDirectory, "active_collections.txt");
-
+    
 
 
     static async Task Main()
@@ -118,59 +120,88 @@ class Program
     {
         Console.WriteLine($"Начало обработки файла: {imagePath}");
 
-        // Проверяем, существует ли файл изображения
         if (!File.Exists(imagePath))
         {
             Console.WriteLine($"Файл не найден: {imagePath}");
             return string.Empty;
         }
 
-        string tessdataPath = Path.Combine(baseDirectory, "tessdata"); // Указываем путь к tessdata
+        string tessdataPath = Path.Combine(baseDirectory, "tessdata");
 
-        // Проверяем, существует ли папка с языковыми моделями
         if (!Directory.Exists(tessdataPath))
         {
-            Console.WriteLine($"Папка с данными Tesseract не найдена: {tessdataPath}");
+            Console.WriteLine($"Папка с tessdata не найдена: {tessdataPath}");
             return string.Empty;
         }
 
-        // Проверяем, какие файлы есть в tessdata
-
+        string tempPath = Path.Combine(Path.GetTempPath(), "tess_input.png");
 
         try
         {
-            using (var engine = new TesseractEngine(tessdataPath, "rus+eng", EngineMode.Default))
+            // === Подготовка изображения через OpenCvSharp ===
+            Console.WriteLine($"начало подготовки изображения");
+            try
             {
-                // Настройки для распознавания
-                
-                
+                using var src = Cv2.ImRead(imagePath, ImreadModes.Grayscale);
+                Console.WriteLine($"отметка 1");
 
-                using (var img = Pix.LoadFromFile(imagePath))
-                {
-                    // 1. Конвертация в grayscale (улучшает распознавание)
-                    using (var img8bit = img.ConvertRGBToGray())
-                    {
-                        // 2. Масштабирование в 2 раза
-                        using (var scaled = img8bit.Scale(2.0f, 2.0f)) // Увеличение в 2 раза
-                        {
-                            // 3. Распознавание с режимом для квитанций
-                            using (var page = engine.Process(scaled, PageSegMode.Auto))
-                            {
-                                string text = page.GetText();
-                                return text;
-                            }
-                        }
-                    }
-                }
-            }
+                var scaled = new Mat();
+                Cv2.Resize(src, scaled, new OpenCvSharp.Size(src.Width * 5, src.Height * 5), 0, 0, InterpolationFlags.Cubic);
+
+
+                
+                var thresholded = new Mat();
+                Cv2.Threshold(scaled, thresholded, 0, 255, ThresholdTypes.Binary | ThresholdTypes.Otsu);
+
+                Console.WriteLine($"отметка 2");
+                var kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new OpenCvSharp.Size(1, 1));
+                var cleaned = new Mat();
+                Cv2.MorphologyEx(thresholded, cleaned, MorphTypes.Open, kernel);
+
+                int borderSize = 60;
+                Scalar white = new Scalar(255);
+                var bordered = new Mat();
+                Cv2.CopyMakeBorder(cleaned, bordered, borderSize, borderSize, borderSize, borderSize, BorderTypes.Constant, white);
+                Console.WriteLine($"отметка 3");
+
+                // Сохраняем во временный файл
+                Console.WriteLine($"отметка 4");
+                Cv2.ImWrite(tempPath, bordered);
+                Console.WriteLine($"отметка 5");
+            } catch (Exception ex) { Console.WriteLine($"OpenCV error: {ex.Message}"); }
+
+            // === Обработка Tesseract ===
+            Console.WriteLine($"пытаемся создать движок тессеракт");
+            using var engine = new TesseractEngine(tessdataPath, "rus+eng", EngineMode.Default);
+            using var img = Pix.LoadFromFile(tempPath);
+            using var page = engine.Process(img, PageSegMode.Auto);
+
+            string text = page.GetText();            
+
+            return text;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Ошибка: {ex.Message}");
+            Console.WriteLine($"Ошибка при обработке OCR: {ex.Message}");
             return string.Empty;
         }
+        finally
+        {
+            try
+            {
+                if (File.Exists(tempPath))
+                {
+                    File.Delete(tempPath);
+                    Console.WriteLine($"Файл удалён: {tempPath}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при удалении временного файла: {ex.Message}");
+            }
+        }
     }
-       
+
 
     private static void DeleteTempFile(string filePath)
     {
@@ -184,7 +215,8 @@ class Program
     static string ExtractPrice(string text)
     {
         // Регулярка ищет сумму с возможными валютами (р., p., бр.)
-        Match match = Regex.Match(text, @"(?:Общая стоимость|подпиской).*?(\d+(?:[.,]\d{1,2})?)");
+        Match match = Regex.Match(text, @"(?:Общая\s*\n*\s*стоимость|подпиской|Стоимость\s*\n*\s*поездки|Obuwasa CToMMOo?CTb).*?(\d+(?:[.,]\d{1,2})?)", RegexOptions.Singleline
+            | RegexOptions.IgnoreCase);
         if (!match.Success)
         {
             return "Не найдено";
@@ -479,6 +511,100 @@ class Program
 
         await bot.SendTextMessageAsync(chatId, $"Общая сумма чеков: {totalAmount}");
     }
+    // Словарь для хранения медиа-групп с отметкой времени первого сообщения
+    private static Dictionary<string, (List<Message> Messages, DateTime LastReceived, bool IsProcessing)> mediaGroups = new();
+
+
+
+    // Таймер для обработки завершённых медиа-групп
+    private static Timer mediaGroupTimer = new Timer(async _ => await ProcessMediaGroups(), null, 2000, 2000);
+
+    private static async Task ProcessMediaGroups()
+    {
+        var now = DateTime.UtcNow;
+
+        var expiredGroups = mediaGroups
+            .Where(kvp => (now - kvp.Value.LastReceived).TotalSeconds >= 5 && !kvp.Value.IsProcessing)
+            .ToList();
+
+        foreach (var (groupId, groupInfo) in expiredGroups)
+        {
+            var (messages, lastReceived, _) = groupInfo;
+
+            mediaGroups[groupId] = (messages, lastReceived, true);
+
+            try
+            {
+                var chatId = messages.First().Chat.Id;
+                var users = LoadUsers();
+                var user = users.FirstOrDefault(u => u.ChatId == chatId);
+                if (user == null) continue;
+
+                var cityMonthKey = activeCollections.Keys.FirstOrDefault(key => key.StartsWith(user.City));
+                if (cityMonthKey == null) continue;
+
+                var results = new List<string>();
+                int index = 1;
+
+                foreach (var photoMessage in messages)
+                {
+                    var photoSize = photoMessage.Photo?.LastOrDefault();
+                    if (photoSize == null) continue;
+
+                    var fileId = photoSize.FileId;
+                    var fileInfo = await bot.GetFileAsync(fileId);
+                    var filePath = fileInfo.FilePath;
+
+                    if (string.IsNullOrEmpty(filePath)) continue;
+
+                    var userFolder = $"{user.LastName}_{user.FirstName}";
+                    var destinationFilePath = Path.Combine(reportsDir, user.City, activeCollections[cityMonthKey], userFolder, $"{chatId}_{photoSize.FileUniqueId}.jpg");
+
+                   
+
+                    Directory.CreateDirectory(Path.GetDirectoryName(destinationFilePath));
+
+                    using (var saveImageStream = new FileStream(destinationFilePath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                    {
+                        var fileUrl = $"https://api.telegram.org/file/bot{botToken}/{filePath}";
+                        var httpClient = new HttpClient();
+                        var imageBytes = await httpClient.GetByteArrayAsync(fileUrl);
+                        await saveImageStream.WriteAsync(imageBytes, 0, imageBytes.Length);
+                    }
+
+                    var tempFilePath = Path.Combine(Path.GetTempPath(), "tess_input.png");
+                    File.Copy(destinationFilePath, tempFilePath, true);
+
+                    var extractedText = ExtractText(tempFilePath);
+                    DeleteTempFile(tempFilePath);
+                    var price = ExtractPrice(extractedText);
+
+                    if (price != "Не найдено")
+                    {
+                        var autoChecksFilePath = Path.Combine(reportsDir, user.City, activeCollections[cityMonthKey], userFolder, "auto_checks.txt");
+                        var checkEntry = $"{price} {DateTime.Now:yyyy-MM-dd}";
+                        await File.AppendAllLinesAsync(autoChecksFilePath, new[] { checkEntry });
+                        results.Add($"Изображение {index++}: {price} р.");
+                    }
+                    else
+                    {
+                        results.Add($"Изображение {index++}: цена не найдена");
+                    }
+                }
+
+                await bot.SendTextMessageAsync(chatId, $"Получено {results.Count} изображений:\n" + string.Join("\n", results));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при обработке группы {groupId}: {ex.Message}");
+            }
+            finally
+            {
+                // Удаляем полностью, повторной обработки не будет
+                mediaGroups.Remove(groupId);
+            }
+        }
+    }
 
     private static async Task HandleNonTextMessage(long chatId, Message message)
     {
@@ -501,82 +627,21 @@ class Program
 
         if (message.Type == MessageType.Photo)
         {
-            // Обработка изображений
-            var photo = message.Photo.Last(); // Бот получает несколько размеров фото, берем самое большое
-            await bot.SendTextMessageAsync(chatId, "Изображение получено. Спасибо!");
-
-            // Сохраняем изображение
-            var fileId = photo.FileId;
-            var fileInfo = await bot.GetFileAsync(fileId);
-            var filePath = fileInfo.FilePath;
-
-            if (string.IsNullOrEmpty(filePath))
+            var groupId = message.MediaGroupId ?? Guid.NewGuid().ToString(); // Для одиночных изображений создаем уникальный ID
+            if (!mediaGroups.TryGetValue(groupId, out var groupInfo))
             {
-                await bot.SendTextMessageAsync(chatId, "Ошибка: не удалось получить путь к файлу.");
-                return;
+                mediaGroups[groupId] = (new List<Message> { message }, DateTime.UtcNow, false);
             }
-
-            // Создаем путь с учетом фамилии и имени пользователя
-            var userFolder = $"{user.LastName}_{user.FirstName}";
-            var destinationFilePath = Path.Combine(reportsDir, user.City, activeCollections[cityMonthKey], userFolder, $"{chatId}_{photo.FileUniqueId}.jpg");
-            Directory.CreateDirectory(Path.GetDirectoryName(destinationFilePath)); // Создаем папку, если её нет
-
-            // Скачиваем файл
-            using (var saveImageStream = System.IO.File.Open(destinationFilePath, FileMode.Create))
+            else
             {
-                var fileUrl = $"https://api.telegram.org/file/bot{botToken}/{filePath}";
-                Console.WriteLine($"Попытка скачать файл по URL: {fileUrl}");
-
-                using (var httpClient = new HttpClient())
+                if (!groupInfo.IsProcessing)
                 {
-                    try
-                    {
-                        var imageBytes = await httpClient.GetByteArrayAsync(fileUrl);
-                        await saveImageStream.WriteAsync(imageBytes, 0, imageBytes.Length);
-                        Console.WriteLine($"Файл успешно сохранен: {destinationFilePath}");
-                        saveImageStream.Close();
-                        // Создаём папку, если её нет
-                        string tempDir = Path.GetTempPath();
-                        Directory.CreateDirectory(tempDir);
-
-                        // Генерируем новый путь в temp-папке
-                        string tempFilePath = Path.Combine(tempDir, Path.GetFileName(destinationFilePath));
-                        Console.WriteLine($"Создали адрес для копирывания: {tempFilePath}");
-
-                        // Копируем файл во временную папку
-                        try
-                        {
-                            File.Copy(destinationFilePath, tempFilePath, true);
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"словили ошибку при копирывании: {ex}");
-                        }
-
-                        // Извлекаем текст из изображения
-                        var extractedText = ExtractText(destinationFilePath);
-                        DeleteTempFile(tempFilePath);
-                        var price = ExtractPrice(extractedText);
-
-                        if (price != "Не найдено")
-                        {
-                            // Записываем сумму чека в файл auto_checks.txt
-                            var autoChecksFilePath = Path.Combine(reportsDir, user.City, activeCollections[cityMonthKey], userFolder, "auto_checks.txt");
-                            var checkEntry = $"{price} {DateTime.Now:yyyy-MM-dd}";
-                            await File.AppendAllLinesAsync(autoChecksFilePath, new[] { checkEntry });
-
-                            await bot.SendTextMessageAsync(chatId, $"Сумма чека {price} успешно добавлена.");
-                        }
-                        else
-                        {
-                            await bot.SendTextMessageAsync(chatId, "Не удалось извлечь стоимость поездки из изображения.");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Ошибка при скачивании файла: {ex.Message}");
-                        await bot.SendTextMessageAsync(chatId, "Ошибка при сохранении файла.");
-                    }
+                    groupInfo.Messages.Add(message);
+                    mediaGroups[groupId] = (groupInfo.Messages, DateTime.UtcNow, false); // обновляем LastReceived
+                }
+                else
+                {
+                    Console.WriteLine($"Группа {groupId} уже обрабатывается — изображение проигнорировано.");
                 }
             }
         }
